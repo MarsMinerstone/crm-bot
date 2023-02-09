@@ -61,14 +61,25 @@ class BotDB:
         return False
 
 
+    def get_role(self, user_tg_id):
+        result = self.cursor.execute("SELECT `role` FROM `users` WHERE `user_tg_id` = ?", (user_tg_id,))
+        return result.fetchone()[0]
+
+
     def edit_role(self, user_tg_id, role):
         self.cursor.execute("UPDATE `users` SET `role` = ? WHERE `user_tg_id` = ?", (role, user_tg_id))
         return self.conn.commit()
 
 
+    def get_users(self):
+        result = self.cursor.execute("SELECT * FROM `users`")
+        return result.fetchall()
+
+
     # houses9
     # houses9
     # houses9
+
 
     def get_all_houses9(self):
         result = self.cursor.execute("SELECT * FROM `houses9`")
@@ -273,6 +284,11 @@ class BotDB:
     def get_reserve(self, id):
         result = self.cursor.execute("SELECT * FROM `calltable` WHERE `id` = ?", (id,))
         return result.fetchone()
+
+
+    def edit_reserve(self, id, comment):
+        self.cursor.execute("UPDATE `calltable` SET `comment` = ? WHERE `id` = ?", (comment, id))
+        return self.conn.commit()
 
 
     # close

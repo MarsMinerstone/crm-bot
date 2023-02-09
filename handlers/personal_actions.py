@@ -9,35 +9,63 @@ from aiogram.dispatcher import FSMContext
 from config import ADMIN
 import commands as cmds
 from typing import Union
-from config import SUPER_GROUP
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 
 s = {"Left": "Первый", "Right": "Второй"}
+r = {None: "Не добавлен", '0': "Редактор", '1': "Полный редактор"}
 
 
-# start ----------------------------------------
-# start ----------------------------------------
-# start ----------------------------------------
+# additional commands
 
 
-@dp.message_handler(commands="add")
-async def add_wl(message: types.Message):
+def is_admin(user):
+    if user == ADMIN:
+        return True
+    return False
+
+
+# admin ----------------------------------------
+# admin ----------------------------------------
+# admin ----------------------------------------
+
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith('users'))
+async def pc_users(callback_query: types.CallbackQuery):
+    user = callback_query.from_user.id
+
+    users = BotDB.get_users()
+    msg = "ЭТО ТЕСТОВЫЙ ВАРИАНТ! \n\nНапишите команду \"/user telegram_id role\" для изменения роли, где role=1 - Полный редактор, role=0 - Редактор, role=None - Никто\n\n"
+    for u in users:
+        msg += f"{u[2]}\n{f'@{u[3]}' if u[3] is not None else ''}\ntelegram_id: <code>{u[1]}</code>\nРоль: {r[u[4]]}\n\n"
+
+    await callback_query.message.edit_text(msg, reply_markup=kb.back_num2_inkb)
+
+
+@dp.message_handler(commands="user")
+async def edit_wl(message: types.Message):
     user = message.from_user.id
     if int(user) == int(ADMIN):
-        _, user_2 = message.text.split(" ")
-        BotDB.edit_role(user_2, 0)
-        await bot.send_message(user, f"{user_2} Добавлен в белый список")
+        a = {"1": 1, "0": 0, "None": None}
+        _, user_2, role = message.text.split(" ")
+
+        BotDB.edit_role(user_2, a.get(role))
+        await start(message)
 
 
-@dp.message_handler(commands="remove")
-async def add_wl(message: types.Message):
-    user = message.from_user.id
-    if int(user) == int(ADMIN):
-        _, user_2 = message.text.split(" ")
-        BotDB.edit_role(user_2, None)
-        await bot.send_message(user, f"{user_2} Удален из белого списка")
+# @dp.message_handler(commands="remove")
+# async def add_wl(message: types.Message):
+#     user = message.from_user.id
+#     if int(user) == int(ADMIN):
+#         _, user_2 = message.text.split(" ")
+#         BotDB.edit_role(user_2, None)
+#         await bot.send_message(user, f"{user_2} Удален из белого списка")
+
+
+# start ----------------------------------------
+# start ----------------------------------------
+# start ----------------------------------------
 
 
 @dp.message_handler(commands="start")
@@ -50,7 +78,7 @@ async def start(message: types.Message):
     if BotDB.check_role(user):
         await bot.send_message(user, 
                                f"Выберете команду:",
-                               reply_markup=kb.main_kb())
+                               reply_markup=kb.main_kb(admin=is_admin(user)))
 
 
 @dp.message_handler(lambda msg: not BotDB.check_role(msg.from_user.id))
@@ -65,8 +93,8 @@ async def c_banned(callback_query: types.CallbackQuery):
 async def pc_add_house9(callback_query: types.CallbackQuery):
     user = callback_query.from_user.id
 
-    await callback_query.message.edit_text(f"text",
-                                           reply_markup=kb.main_kb())
+    await callback_query.message.edit_text(f"Выберете команду:",
+                                           reply_markup=kb.main_kb(admin=is_admin(user)))
 
 
 # house9 --------------------------------------------------------------------------------------------------- 
@@ -81,10 +109,12 @@ async def pc_add_house9(callback_query: types.CallbackQuery):
     
     msg = "Девятиэтажки:\n\n"
     for i in houses9:
-        msg += f"🏢<b>Общежитие №{i[0]}</b>\n<b>Адрес:</b> <i>{i[1]}</i>\n\n👨‍💼<b>Заведующий:</b> <i>{i[2]}</i>\n📱<b>Контакт:</b> <code>{i[4]}</code>\n❕<b>Комментарий:</b> <i>{i[3]}</i>\n\n"
+        msg += f"🏢<b>Общежитие №{i[0]}</b>\n<b>Адрес:</b> <i>{i[1]}</i>\n\n👨‍💼<b>Заведующий:</b> <i>{i[2]}</i>\n📱<b>Контакт:</b> <code>{i[4]}</code>\n❕<b>Комментарий:</b> <i>{i[3]}</i>\n\n\n"
+
+    role = BotDB.get_role(user)
 
     await callback_query.message.edit_text(msg,
-                                           reply_markup=kb.houses9_inkb(tuple(k[0] for k in houses9)))
+                                           reply_markup=kb.houses9_inkb(tuple(k[0] for k in houses9), role))
 
 
 # edit house9 ----------------------
@@ -137,7 +167,7 @@ async def p_edit_houses9_data(message: types.Message, state: FSMContext):
                            f"👨‍💼<b>Заведующий:</b> <i>{house9[2]}</i>\n"
                            f"📱<b>Контакт:</b> <code>{house9[4]}</code>\n"
                            f"❕<b>Комментарий:</b> <i>{house9[3]}</i>",
-                           reply_markup=kb.houses9_floors_inkb(floors, house9[0]))
+                           reply_markup=kb.houses9_floors_inkb(floors, house9[0], role))
 
 
 # add house9 ----------------------
@@ -210,6 +240,7 @@ async def add_house9_comment(message: types.Message, state: FSMContext):
     house9 = BotDB.get_house9(house9_id)
 
     floors = BotDB.get_house9_floors(house9_id)
+    role = BotDB.get_role(user)
 
     await bot.send_message(user,
                            f"🏢<b>Общежитие №{house9[0]}</b>\n"
@@ -217,7 +248,7 @@ async def add_house9_comment(message: types.Message, state: FSMContext):
                            f"👨‍💼<b>Заведующий:</b> <i>{house9[2]}</i>\n"
                            f"📱<b>Контакт:</b> <code>{house9[4]}</code>\n"
                            f"❕<b>Комментарий:</b> <i>{house9[3]}</i>",
-                           reply_markup=kb.houses9_floors_inkb(floors, house9_id))
+                           reply_markup=kb.houses9_floors_inkb(floors, house9_id, role))
     await state.finish()
     # await p_houses9(message)
 
@@ -232,13 +263,14 @@ async def pc_select_house9(callback_query: types.CallbackQuery):
 
     house9 = BotDB.get_house9(callback_dict.get("house9"))
     floors = BotDB.get_house9_floors(house9[0])
+    role = BotDB.get_role(user)
 
     await callback_query.message.edit_text(f"🏢<b>Общежитие №{house9[0]}</b>\n"
                                            f"<b>Адрес:</b> <i>{house9[1]}</i>\n\n"
                                            f"👨‍💼<b>Заведующий:</b> <i>{house9[2]}</i>\n"
                                            f"📱<b>Контакт:</b> <code>{house9[4]}</code>\n"
                                            f"❕<b>Комментарий:</b> <i>{house9[3]}</i>",
-                                           reply_markup=kb.houses9_floors_inkb(floors, house9[0]))
+                                           reply_markup=kb.houses9_floors_inkb(floors, house9[0], role))
 
 
 # house9 floors --------------------------------------------------------------------------------------------------- 
@@ -565,9 +597,9 @@ async def pc_set_remind_time(callback_query: types.CallbackQuery, state: FSMCont
 
     time = ""
     if callback_dict.get("remind_time") == "month":
-        time = datetime.now().replace(microsecond=0) + relativedelta(months=+1)
+        time = datetime.now().replace(microsecond=0) + relativedelta(months=+1, hour=9, minute=0, second=0)
     elif callback_dict.get("remind_time") == "week":
-        time = datetime.now().replace(microsecond=0) + relativedelta(days=+7)
+        time = datetime.now().replace(microsecond=0) + relativedelta(days=+7, hour=9, minute=0, second=0)
     async with state.proxy() as data:
         data["time"] = time
 
@@ -745,6 +777,41 @@ async def p_add_reserve_comment(message: types.Message, state: FSMContext):
                            f"Объявление #{reserve[0]} \n<b>url:</b> {reserve[1]} \n<b>Комментарий:</b> <i>{reserve[2]}</i>\n\n",
                            reply_markup=kb.reserve_select_inkb(reserve_id))
     await state.finish()
+
+
+# edit reserve -------------
+
+
+class EditReserveStatesGroup(StatesGroup):
+    reserve_id = State()
+    data = State()
+
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith('edit_reserve'))
+async def pc_edit_reserve(callback_query: types.CallbackQuery, state: FSMContext):
+    user = callback_query.from_user.id
+
+    callback_dict = cmds.define_callback_data(callback_query.data)
+    await callback_query.message.edit_text("Введите комментарий:")
+    await EditReserveStatesGroup.data.set()
+    await state.update_data(reserve_id=callback_dict.get("edit_reserve"))
+
+
+@dp.message_handler(state=EditReserveStatesGroup.data)
+async def p_edit_reserve_data(message: types.Message, state: FSMContext):
+    user = message.from_user.id
+
+
+    async with state.proxy() as data:
+        pass
+    BotDB.edit_reserve(data["reserve_id"], message.text)
+
+    reserve = BotDB.get_reserve(data["reserve_id"])
+    await state.finish()
+
+    await bot.send_message(user,
+                           f"Объявление #{reserve[0]} \n<b>url:</b> {reserve[1]} \n<b>Комментарий:</b> <i>{reserve[2]}</i>\n\n",
+                           reply_markup=kb.reserve_select_inkb(reserve[0]))
 
 
 # Back ----------------------------------------

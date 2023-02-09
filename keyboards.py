@@ -6,29 +6,39 @@ from aiogram.types import \
 # main
 
 
-def main_kb():
+def main_kb(admin=False):
     main_kb = InlineKeyboardMarkup()
     main_kb.add(
         InlineKeyboardButton(f'Объявления', callback_data=f'reserve'),
         InlineKeyboardButton(f'Девятиэтажки', callback_data=f'houses9'))
+    if admin is True:
+        main_kb.insert(InlineKeyboardButton(f'Пользователи', callback_data=f'users'))
     return main_kb
 
-def houses9_inkb(c: int):
+
+back_num2_inkb = InlineKeyboardMarkup().add(InlineKeyboardButton(f'◀️На главную', callback_data=f'main'))
+
+
+def houses9_inkb(c: int, role):
     houses9_inkb = InlineKeyboardMarkup(row_width=4)
     for i in sorted(c):
         houses9_inkb.insert(InlineKeyboardButton(f'{i}', callback_data=f'house9:{i}'))
+    if role == "1":
+        houses9_inkb.add(
+            InlineKeyboardButton(f'➕Добавить общежитие', callback_data=f'add_house9'))
     houses9_inkb.add(
-        InlineKeyboardButton(f'➕Добавить общежитие', callback_data=f'add_house9')).add(
         InlineKeyboardButton(f'◀️На главную', callback_data=f'main'))
     return houses9_inkb
 
 
-def houses9_floors_inkb(floors, house_id):
+def houses9_floors_inkb(floors, house_id, role):
     houses9_floors_inkb = InlineKeyboardMarkup(row_width=3)
     for i, floor_id in enumerate(sorted(floors)):
         houses9_floors_inkb.insert(InlineKeyboardButton(f'{i+1}', callback_data=f'floor9:{floor_id}'))
+    if role == "1":
+        houses9_floors_inkb.add(
+            InlineKeyboardButton(f'Изменить данные', callback_data=f'edit_house9:{house_id}'))
     houses9_floors_inkb.add(
-        InlineKeyboardButton(f'Изменить данные', callback_data=f'edit_house9:{house_id}')).add(
         InlineKeyboardButton(f'◀️Ко всем общежитиям', callback_data=f'houses9'))
     return houses9_floors_inkb
 
@@ -118,6 +128,7 @@ def reserve_inkb(r: int):
 def reserve_select_inkb(reserve_id):
     reserve_select_inkb = InlineKeyboardMarkup(row_width=4)
     reserve_select_inkb.add(
+        InlineKeyboardButton(f'Изменить объявление', callback_data=f'edit_reserve:{reserve_id}'),
         InlineKeyboardButton(f'❌Удалить объявление', callback_data=f'delete_reserve:{reserve_id}'),
         InlineKeyboardButton('⏱Поставить уведомление', callback_data=f'set_reminder:{reserve_id}&tag:reserve')).add(
         InlineKeyboardButton(f'◀️Назад', callback_data=f'reserve'))
